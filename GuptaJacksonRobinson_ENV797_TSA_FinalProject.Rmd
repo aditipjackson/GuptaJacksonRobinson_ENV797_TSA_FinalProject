@@ -81,8 +81,8 @@ transmission_TS <- ts(transmission_CLEAN,start=c(2015,1),end = c(2023,12),freque
 tail(transmission_TS,12)
 
 # initial plot
-ggplot(transmission_CLEAN_Date,aes(x=Date,y=TotalLineLength))+
-  geom_line()
+#ggplot(transmission_CLEAN_Date,aes(x=Date,y=TotalLineLength))+
+ # geom_line()
 
 ```
 
