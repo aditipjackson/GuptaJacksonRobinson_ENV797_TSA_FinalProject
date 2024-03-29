@@ -18,7 +18,6 @@ When you click the **Knit** button a document will be generated that includes bo
 ## Setup
 
 ```{r packages}
-
 # loading packages
 library(tidyverse)
 library(dplyr)
@@ -31,20 +30,66 @@ library(tseries)
 library(outliers)
 library(smooth)
 library(readr)
+library(zoo)
 
 ```
 
 # Data Wrangling
 
 ```{r wrangle}
+# importing data
+transmission_RAW <- read_excel("Data/Raw/Transmission_Lines_1711480217358.xlsx",
+                               col_names=TRUE)
 
+#renaming columns, subsetting date and line length columns and dropping NAs
+transmission_CLEAN <- transmission_RAW %>%
+  select("Line Length (cKM)","Month Of Completion","Year Of Completion (FY)") %>%
+  rename("LineLength"= "Line Length (cKM)",
+         "Month"="Month Of Completion",
+         "Year"="Year Of Completion (FY)")
 
+# checking for N/As
+any(is.na(transmission_CLEAN))
+
+# replacing N/As with 0's to account for 0 transmission built in that period 
+transmission_CLEAN <- transmission_CLEAN %>%
+  mutate(LineLength = ifelse(is.na(LineLength),0, LineLength))
+
+#parsing the year column
+transmission_CLEAN$Year <- substr(transmission_CLEAN$Year,start=1,stop=4)
+
+#combining month and year columns into a new column
+transmission_CLEAN$Date <-  paste0(transmission_CLEAN$Month, "-", transmission_CLEAN$Year)
+
+#converting date column into a date object
+transmission_CLEAN$Date <- mdy(transmission_CLEAN$Date)
+
+# grouping by date and summing up line length
+transmission_CLEAN <- transmission_CLEAN %>%
+  mutate(Month = month(Date), Year = year(Date)) %>%
+  group_by(Date)%>%
+  summarise(TotalLineLength = sum(LineLength))
+  
+# CHECK FOR MISSING DATES
+# Days <- as.data.frame(seq.Date(from=as.Date("2015/01/16"),to=as.Date("2023/12/23"), by ="day"))
+# colnames(Days) <- "date"
+# merge with the data with missing rows
+# date_check <-left_join(Days, transmission_CLEAN_Date, by="Date")
+
+# creating time series object
+transmission_TS <- ts(transmission_CLEAN,start=c(2015,1),end = c(2023,12),frequency = 12)
+tail(transmission_TS,12)
+
+# initial plot
+ggplot(transmission_CLEAN_Date,aes(x=Date,y=TotalLineLength))+
+  geom_line()
 
 ```
 
 # [ADD]
 
 ```{r}
+
 
 ```
 
