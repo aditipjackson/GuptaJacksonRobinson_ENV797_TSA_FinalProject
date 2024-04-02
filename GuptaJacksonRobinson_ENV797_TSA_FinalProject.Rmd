@@ -31,6 +31,7 @@ library(outliers)
 library(smooth)
 library(readr)
 library(zoo)
+library(cowplot)
 
 ```
 
@@ -73,35 +74,45 @@ transmission_CLEAN <- transmission_CLEAN %>%
 
 #visually inspected data for missing dates
 
+#TO DO -- update per conversation with Luana -- keep as much data as possible
 #removing incomplete years 2015 and 2024
 transmission_CLEAN <- transmission_CLEAN[c(10:105),]
 
+#TO DO -- research how India defines transmission versus distribution 
 #Initial plot
 ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
  geom_line() +
   geom_smooth(method = lm)
 
-#creating time series object
-transmission_TS <- ts(transmission_CLEAN,start=c(2016,1),end = c(2023,12),frequency = 12)
-
-
-
-
-
 ```
 
 # [ADD]
 
-```{r}
+```{r time series}
 
+#creating time series object
+transmission_ts <- ts(transmission_CLEAN,start=c(2016,1),end = c(2023,12),frequency = 12)
 
+ts_plot <- autoplot(transmission_ts[,1])
 
+ACF <- Acf(transmission_ts[,1], lag.max = 40, plot=FALSE)
+PACF <- Pacf(transmission_ts[,1], lag.max = 40, plot=FALSE)
+
+plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 
 ```
 
 ## [ADD]
 
 ```{r}
+
+#Decompose
+
+#Mann-Kendall and ADF to determine d term of ARIMA
+
+#Deseason as needed
+
+#Fit ARIMA (1,0,0)
 
 ```
 
