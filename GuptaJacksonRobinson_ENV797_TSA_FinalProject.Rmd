@@ -72,19 +72,13 @@ transmission_CLEAN <- transmission_CLEAN %>%
   summarise(TotalLineLength = sum(LineLength)) %>%
   select("TotalLineLength","Date")
 
-#visually inspected data for missing dates
-
-#TO DO -- update per conversation with Luana -- keep as much data as possible
-#removing incomplete years 2015 and 2024
-transmission_CLEAN <- transmission_CLEAN[c(10:105),]
-
-#TO DO -- research how India defines transmission versus distribution 
 #Initial plot
 ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
  geom_line() +
   geom_smooth(method = lm)
 
 ```
+*Analysis*: Since theit showcases a declining trend, we explored if the data represented transmission or distribution. The datasource clearly states that it is transmission data only. We further explored the voltage levels of  this data to see if the decline could be attributed to the addition of higher efficiency voltage lines but found from xxx datasource that that is not the case. Thus we proceed with the findnig that transmission capacity additions have declined in India between 2015 and 2023.
 
 # [ADD]
 
@@ -93,12 +87,14 @@ ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
 #creating time series object
 transmission_ts <- ts(transmission_CLEAN,start=c(2016,1),end = c(2023,12),frequency = 12)
 
+#Plotting the time series, ACF and PACF
 ts_plot <- autoplot(transmission_ts[,1])
-
 ACF <- Acf(transmission_ts[,1], lag.max = 40, plot=FALSE)
 PACF <- Pacf(transmission_ts[,1], lag.max = 40, plot=FALSE)
 
 plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
+
+#Observations: trend is declining, ACF - significant -> MA required
 
 ```
 
@@ -107,13 +103,45 @@ plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 ```{r}
 
 #Decompose
+transmission_ts_decomp <- decompose(transmission_ts[,1], "multiplicative")
+print(plot(transmission_ts_decomp))
+
+#Observation: residual still has seasonality -> differencing required? declining trend confirmed. seasonality exists.
+#Seasonality explained: declines in the middle of the year during monsoon.
 
 #Mann-Kendall and ADF to determine d term of ARIMA
+SMKtest <- SeasonalMannKendall(transmission_ts[,1])
+print(summary(SMKtest))
 
-#Deseason as needed
+ADFTest <- adf.test(transmission_ts[,1], alternative = "stationary")
+print(ADFTest)
 
-#Fit ARIMA (1,0,0)
+#Observation: both are rejected. SMK rejection -> deterministic. ADF rejection -> stationary.
+#Talk to Luana about this!!
 
+#Deseason??
+
+#Defining the training and testing datasets and converting to time series
+transmission_training <- transmission_CLEAN[1:96,]
+transmission_testing <- transmission_CLEAN[97:107,]
+
+transmission_ts_training <- ts(transmission_training, start=c(2016,1),end = c(2023,12),frequency = 12)
+transmission_ts_testing <- ts(transmission_testing, start=c(2016,1),end = c(2023,12),frequency = 12)
+
+#Fitting the model
+auto.arima(transmission_ts_training[,1])
+transmission_training_ARIMA311101 <- Arima(transmission_ts_training[,1], 
+                                           order=c(3,1,1), seasonal=c(1,0,1), 
+                                           include.constant = TRUE)
+summary(transmission_training_ARIMA311101)
+checkresiduals(transmission_training_ARIMA311101)
+
+#Forecasting it on the testing data
+Forecast1 <- forecast(transmission_training_ARIMA311101, h=12)
+
+autoplot(transmission_ts[,1], series = "original")+
+  autolayer(transmission_training_ARIMA311101$fitted, series = "SARIMA")+
+  autolayer(Forecast1$mean, series = "SARIMA_forecast")
 ```
 
 ## [ADD]
