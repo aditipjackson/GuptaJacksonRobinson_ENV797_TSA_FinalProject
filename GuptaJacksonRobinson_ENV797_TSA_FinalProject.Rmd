@@ -92,17 +92,17 @@ ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
 
 *Check* check correlation with GDP growth/ check if peak growth was in the early 2000s and thereafter it's declining. Plus the system is built to bear more capacity than you actually have so you can add new gen capacity without adding to transmission - evident from difference in growth rates of generation and transmission. regulations for transmission - could block fast transmission - these can be points for qualitative analysis. Maybe they're pushing for more distributed generation which would increase distribution instead of transmission.
 
-# [ADD]
+# TIME SERIES ANALYSIS
 
 ```{r time series}
 
 #creating time series object
-transmission_ts <- ts(transmission_CLEAN,start=c(2016,1),end = c(2023,12),frequency = 12)
+transmission_ts <- ts(transmission_CLEAN[,2],start=c(2015,4),end = c(2024,1),frequency = 12)
 
 #Plotting the time series, ACF and PACF
-ts_plot <- autoplot(transmission_ts[,2])
-ACF <- Acf(transmission_ts[,2], lag.max = 40, plot=FALSE)
-PACF <- Pacf(transmission_ts[,2], lag.max = 40, plot=FALSE)
+ts_plot <- autoplot(transmission_ts)
+ACF <- Acf(transmission_ts, lag.max = 40, plot=FALSE)
+PACF <- Pacf(transmission_ts, lag.max = 40, plot=FALSE)
 
 plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 
@@ -112,10 +112,10 @@ plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 
 ## [ADD]
 
-```{r}
+```{r decompose}
 
 #Decompose
-transmission_ts_decomp <- decompose(transmission_ts[,2], "multiplicative")
+transmission_ts_decomp <- decompose(transmission_ts, "additive")
 print(plot(transmission_ts_decomp))
 
 #Observation: residual still has seasonality -> differencing required? declining trend confirmed. seasonality exists.
@@ -123,26 +123,30 @@ print(plot(transmission_ts_decomp))
 #this would force a seasonal component - check if there are auctions that happen every few years - there is seasonality in the decisionmaking of when the transmission is added. 
 
 #Mann-Kendall and ADF to determine d term of ARIMA
-SMKtest <- SeasonalMannKendall(transmission_ts[,2])
+SMKtest <- SeasonalMannKendall(transmission_ts)
 print(summary(SMKtest))
 
-ADFTest <- adf.test(transmission_ts[,2], alternative = "stationary")
+ADFTest <- adf.test(transmission_ts, alternative = "stationary")
 print(ADFTest)
 
 #Observation: Only SMK is rejected. SMK rejection -> deterministic. ADF not rejected -> not stationary
 
 #Deseason?? No
+```
 
+```{r test and train}
 #Defining the training and testing datasets and converting to time series
 transmission_training <- transmission_CLEAN[1:96,]
 transmission_testing <- transmission_CLEAN[97:106,]
 
-transmission_ts_training <- ts(transmission_training, start=c(2015,4),end = c(2023,3),frequency = 12)
-transmission_ts_testing <- ts(transmission_testing, start=c(2023, 4),end = c(2024,1),frequency = 12)
+transmission_ts_training <- ts(transmission_training[,2], 
+                               start=c(2015,4),end = c(2023,3),frequency=12)
+transmission_ts_testing <- ts(transmission_testing[,2],
+                              start=c(2023, 4),end = c(2024,1),frequency = 12)
 
-#Fitting the model
-print(auto.arima(transmission_ts_training[,2]))
-transmission_training_ARIMA021101 <- Arima(transmission_ts_training[,2], 
+#Fitting auto ARIMA model on training data
+print(auto.arima(transmission_ts_training))
+transmission_training_ARIMA021101 <- Arima(transmission_ts_training, 
                                            order=c(0,2,1), seasonal=c(1,0,1), 
                                            include.constant = TRUE)
 summary(transmission_training_ARIMA021101)
@@ -152,7 +156,7 @@ checkresiduals(transmission_training_ARIMA021101)
 Forecast1 <- forecast(transmission_training_ARIMA021101, h=12)
 
 #Plotting forecast of testing data
-autoplot(transmission_ts[,2], series = "original")+
+autoplot(transmission_ts, series = "original")+
   autolayer(transmission_training_ARIMA021101$fitted, series = "SARIMA")+
   autolayer(Forecast1$mean, series = "SARIMA_forecast")
 ```
