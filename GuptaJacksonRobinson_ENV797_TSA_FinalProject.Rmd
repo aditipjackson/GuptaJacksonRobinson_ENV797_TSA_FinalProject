@@ -143,7 +143,11 @@ transmission_ts_training <- ts(transmission_training[,2],
                                start=c(2015,4),end = c(2023,3),frequency=12)
 transmission_ts_testing <- ts(transmission_testing[,2],
                               start=c(2023, 4),end = c(2024,1),frequency = 12)
+```
 
+## FITTING AND FORECASTING
+
+```{r SARIMA model and forecast}
 #Fitting auto ARIMA model on training data
 print(auto.arima(transmission_ts_training))
 transmission_training_ARIMA021101 <- Arima(transmission_ts_training, 
@@ -152,16 +156,74 @@ transmission_training_ARIMA021101 <- Arima(transmission_ts_training,
 summary(transmission_training_ARIMA021101)
 checkresiduals(transmission_training_ARIMA021101)
 
-#Forecasting it on the testing data
-Forecast1 <- forecast(transmission_training_ARIMA021101, h=12)
+#Forecasting using training training data
+sarima_forecast <- forecast(transmission_training_ARIMA021101, h=60)
 
-#Plotting forecast of testing data
+#Plotting forecast and comparing to testing data
 autoplot(transmission_ts, series = "original")+
   autolayer(transmission_training_ARIMA021101$fitted, series = "SARIMA")+
-  autolayer(Forecast1$mean, series = "SARIMA_forecast")
+  autolayer(sarima_forecast$mean, series = "SARIMA_forecast")+
+  ggtitle("TBATS FORECAST")+
+  ylab("Total Line Length (km)")
+
+# Checking accuracy of forecast
+accuracy(sarima_forecast)
+
 ```
 
 ## [ADD]
+
+```{r TBATS}
+
+# Fit the TBATS model with exogenous variables
+tbats_model <- tbats(transmission_ts_training)
+
+# Forecast using the fitted model
+tbats_forecast <- forecast(tbats_model, h = 60)
+
+# plotting model
+autoplot(transmission_ts, series = "original")+
+  autolayer(tbats_model$fitted.values, series = "TBATS")+
+  autolayer(tbats_forecast$mean, series = "TBATS_Forecast")+
+  ggtitle("TBATS FORECAST")+
+  ylab("Total Line Length (km)")
+
+accuracy(tbats_forecast)
+
+```
+
+
+## [ADD]
+
+```{r}
+
+# fitting neural network model using training data
+NN_model <- nnetar(transmission_ts_training, p=0, P=1)
+
+# forecasting using NN model
+NN_forecast <- forecast(NN_model, h=60)
+
+autoplot(NN_forecast)
+
+# plotting model
+autoplot(transmission_ts, series = "original")+
+  autolayer(NN_model$fitted, series = "Neural_Network")+
+  autolayer(NN_forecast$mean, series = "Neural_Network_Model")+
+  ggtitle("NEURAL NETWORK FORECAST")+
+  ylab("Total Line Length (km)")
+
+accuracy(NN_forecast)
+
+
+#Neural network
+#NN_fit <- nnetar(transmission_ts,p=1,P=0)
+#NN_for <- forecast(NN_fit, h=60)
+#autoplot(transmission_ts[,2], series = "original")+
+#  autolayer(NN_for, series = "NN",PI=FALSE)
+
+```
+
+
 
 ```{r}
 #Forecasting till 2050 using Exponential Smoothing
