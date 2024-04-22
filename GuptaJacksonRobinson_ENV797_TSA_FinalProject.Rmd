@@ -6,7 +6,8 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(include = FALSE)
+
 ```
 
 ## R Markdown
@@ -18,6 +19,7 @@ When you click the **Knit** button a document will be generated that includes bo
 ## Setup
 
 ```{r packages}
+
 # loading packages
 library(tidyverse)
 library(dplyr)
@@ -38,41 +40,46 @@ library(cowplot)
 # Data Wrangling
 
 ```{r wrangle}
-# importing data
+
+#Importing data
 transmission_RAW <- read_excel("Data/Raw/Transmission_Lines_1711480217358.xlsx",
                                col_names=TRUE)
 
-#renaming columns, subsetting date and line length columns and dropping NAs
+#Renaming columns, subsetting date and line length columns and dropping NAs
 transmission_CLEAN <- transmission_RAW %>%
-  select("Line Length (cKM)","Month Of Completion","Year Of Completion (FY)") %>%
+  select("Line Length (cKM)",
+         "Month Of Completion",
+         "Year Of Completion (FY)") %>%
   rename("LineLength"= "Line Length (cKM)",
          "Month"="Month Of Completion",
          "Year"="Year Of Completion (FY)")
 
-# checking for N/As
-any(is.na(transmission_CLEAN))
+#Checking for N/As
+any(is.na(transmission_CLEAN)) #this reveals that there are no NAs
 
-#splitting into month and 2-digit year
+#Splitting into month and 2-digit year
 transmission_CLEAN <- transmission_CLEAN %>%
   separate(col = Month, into = c("Month", "YearSep"), sep = "-")
 
-#transforming to 4-digit year
-transmission_CLEAN$four_digit_year <- as.numeric(paste0("20", transmission_CLEAN$YearSep))
+#Transforming to 4-digit year
+transmission_CLEAN$four_digit_year <-
+  as.numeric(paste0("20", transmission_CLEAN$YearSep))
 
-#concatenating into month and 4-digit year
+#Concatenating into month and 4-digit year
 transmission_CLEAN <- transmission_CLEAN %>%
   mutate(Date = paste0(Month, sep = "-", four_digit_year))
 
-#converting date column into a date object
+#Converting date column into a date object
 transmission_CLEAN$Date <- my(transmission_CLEAN$Date)
 
-# grouping by date and summing up line length
+#Grouping by date and summing up line length
 transmission_CLEAN <- transmission_CLEAN %>%
   group_by(Date)%>%
   summarise(TotalLineLength = sum(LineLength)) %>%
   select("TotalLineLength","Date")
 
-colnames(transmission_CLEAN)[names(transmission_CLEAN)=="TotalLineLength"] <- "AnnualAdditions"
+colnames(transmission_CLEAN)[names(transmission_CLEAN)=="TotalLineLength"] <-
+  "AnnualAdditions"
 
 #Cumulative annual additions to get total line length in each month
 transmission_CLEAN <- transmission_CLEAN %>%
@@ -80,7 +87,8 @@ transmission_CLEAN <- transmission_CLEAN %>%
   rename("TotalLineLength" = "cumsum(AnnualAdditions)")
 
 #Reordering columns
-transmission_CLEAN <- select(transmission_CLEAN, Date, TotalLineLength, AnnualAdditions)
+transmission_CLEAN <- select(transmission_CLEAN, Date, TotalLineLength,
+                             AnnualAdditions)
 
 #Initial plot
 ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
@@ -88,29 +96,30 @@ ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
   geom_smooth(method = lm)
 
 ```
-*Analysis*: Since theit showcases a declining trend, we explored if the data represented transmission or distribution. The datasource clearly states that it is transmission data only. We further explored the voltage levels of  this data to see if the decline could be attributed to the addition of higher efficiency voltage lines but found from xxx datasource that that is not the case. Thus we proceed with the findnig that transmission capacity additions have declined in India between 2015 and 2023.
-
-*Check* check correlation with GDP growth/ check if peak growth was in the early 2000s and thereafter it's declining. Plus the system is built to bear more capacity than you actually have so you can add new gen capacity without adding to transmission - evident from difference in growth rates of generation and transmission. regulations for transmission - could block fast transmission - these can be points for qualitative analysis. Maybe they're pushing for more distributed generation which would increase distribution instead of transmission.
 
 # TIME SERIES ANALYSIS
 
 ```{r time series}
 
-#creating time series object
-transmission_ts <- ts(transmission_CLEAN[,2],start=c(2015,4),end = c(2024,1),frequency = 12)
+#Creating time series object
+transmission_ts <- ts(transmission_CLEAN[,2],start=c(2015,4),end = c(2024,1),
+                      frequency = 12)
 
 #Plotting the time series, ACF and PACF
-ts_plot <- autoplot(transmission_ts)
-ACF <- Acf(transmission_ts, lag.max = 40, plot=FALSE)
+ts_plot <- autoplot(transmission_ts)+
+  ylab("Total Line Length (ckm)")+
+  ggtitle("Original TS")
+ACF <- acf(transmission_ts, lag.max = 40, plot=FALSE)
 PACF <- Pacf(transmission_ts, lag.max = 40, plot=FALSE)
 
 plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 
-#Observations: trend is declining, ACF - significant -> MA required - no because it's just a few significant ones in the first 12 lags
+#Observations: trend is declining, ACF - significant ->
+#MA required - no because it's just a few significant ones in the first 12 lags
 
 ```
 
-## [ADD]
+## DECOMPOSITION AND STATISTICAL TESTING
 
 ```{r decompose}
 
@@ -118,9 +127,8 @@ plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 transmission_ts_decomp <- decompose(transmission_ts, "additive")
 print(plot(transmission_ts_decomp))
 
-#Observation: residual still has seasonality -> differencing required? declining trend confirmed. seasonality exists.
-#Seasonality explained: declines in the middle of the year during monsoon.
-#this would force a seasonal component - check if there are auctions that happen every few years - there is seasonality in the decisionmaking of when the transmission is added. 
+#We did not use the decomposed data in our analysis -- removing the seasonality
+#was making things worse.
 
 #Mann-Kendall and ADF to determine d term of ARIMA
 SMKtest <- SeasonalMannKendall(transmission_ts)
@@ -129,25 +137,33 @@ print(summary(SMKtest))
 ADFTest <- adf.test(transmission_ts, alternative = "stationary")
 print(ADFTest)
 
-#Observation: Only SMK is rejected. SMK rejection -> deterministic. ADF not rejected -> not stationary
+#Observations:
+#Only SMK is rejected. SMK rejection -> deterministic
+#ADF not rejected -> not stationary
+#Therefore, the data does not require de-seasoning.
 
-#Deseason?? No
 ```
 
 ```{r test and train}
-#Defining the training and testing datasets and converting to time series
-transmission_training <- transmission_CLEAN[1:96,]
-transmission_testing <- transmission_CLEAN[97:106,]
 
+#Defining the training and testing data sets
+transmission_training <-
+  transmission_CLEAN[1:96,] #April of 2015 through March of 2023
+transmission_testing <-
+  transmission_CLEAN[97:106,] #April of 2023 through January of 2024
+
+#Creating time series of training and testing data sets
 transmission_ts_training <- ts(transmission_training[,2], 
                                start=c(2015,4),end = c(2023,3),frequency=12)
 transmission_ts_testing <- ts(transmission_testing[,2],
                               start=c(2023, 4),end = c(2024,1),frequency = 12)
+
 ```
 
 ## FITTING AND FORECASTING
 
 ```{r SARIMA model and forecast}
+
 #Fitting auto ARIMA model on training data
 print(auto.arima(transmission_ts_training))
 transmission_training_ARIMA021101 <- Arima(transmission_ts_training, 
@@ -156,117 +172,58 @@ transmission_training_ARIMA021101 <- Arima(transmission_ts_training,
 summary(transmission_training_ARIMA021101)
 checkresiduals(transmission_training_ARIMA021101)
 
-#Forecasting using training training data
+#Forecasting using training data
 sarima_forecast <- forecast(transmission_training_ARIMA021101, h=60)
 
 #Plotting forecast and comparing to testing data
 autoplot(transmission_ts, series = "original")+
   autolayer(transmission_training_ARIMA021101$fitted, series = "SARIMA")+
   autolayer(sarima_forecast$mean, series = "SARIMA_forecast")+
-  ggtitle("TBATS FORECAST")+
-  ylab("Total Line Length (km)")
+  ggtitle("SARIMA FORECAST")+
+  ylab("Total Line Length (ckm)")
 
-# Checking accuracy of forecast
+#Checking accuracy of forecast
 accuracy(sarima_forecast)
 
 ```
 
-## [ADD]
-
 ```{r TBATS}
 
-# Fit the TBATS model with exogenous variables
+#Fit the TBATS model
 tbats_model <- tbats(transmission_ts_training)
 
-# Forecast using the fitted model
+#Forecast using the fitted model
 tbats_forecast <- forecast(tbats_model, h = 60)
 
-# plotting model
+#Plotting model
 autoplot(transmission_ts, series = "original")+
   autolayer(tbats_model$fitted.values, series = "TBATS")+
   autolayer(tbats_forecast$mean, series = "TBATS_Forecast")+
   ggtitle("TBATS FORECAST")+
   ylab("Total Line Length (km)")
 
+#Checking accuracy of forecast
 accuracy(tbats_forecast)
 
 ```
 
-
-## [ADD]
-
 ```{r}
 
-# fitting neural network model using training data
+#Fitting neural network model using training data
 NN_model <- nnetar(transmission_ts_training, p=0, P=1)
 
-# forecasting using NN model
+#Forecasting using NN model
 NN_forecast <- forecast(NN_model, h=60)
 
-autoplot(NN_forecast)
-
-# plotting model
+#Plotting model
 autoplot(transmission_ts, series = "original")+
   autolayer(NN_model$fitted, series = "Neural_Network")+
   autolayer(NN_forecast$mean, series = "Neural_Network_Model")+
   ggtitle("NEURAL NETWORK FORECAST")+
   ylab("Total Line Length (km)")
 
+#Checking accuracy of forecast
 accuracy(NN_forecast)
-
-
-#Neural network
-#NN_fit <- nnetar(transmission_ts,p=1,P=0)
-#NN_for <- forecast(NN_fit, h=60)
-#autoplot(transmission_ts[,2], series = "original")+
-#  autolayer(NN_for, series = "NN",PI=FALSE)
-
-```
-
-
-
-```{r}
-#Forecasting till 2050 using Exponential Smoothing
-Forecast_ES <- ses(transmission_ts[,2],h=60, level =c(80,95), alpha=NULL)
-
-autoplot(transmission_ts[,2], series = "original")+
-  autolayer(Forecast_ES, series = "ES")
-
-#LOL. NO. NEXT.
-
-#Neural network
-NN_fit <- nnetar(transmission_ts[,2],p=1,P=0)
-NN_for <- forecast(NN_fit, h=60)
-autoplot(transmission_ts[,2], series = "original")+
-  autolayer(NN_for, series = "NN",PI=FALSE)
-
-#,xreg=fourier(ts_load, K=c(2,12)))
-NN_for1_load <- forecast(NN_fit1_load,h=31, xreg=fourier(ts_load, K=c(2,12),h=31))
-autoplot(NN_for1_load)
-autoplot(ts_load) +
-  autolayer(NN_for1_load, series="Neural Network",PI=FALSE)
-
-date <- seq(ymd("2011-07-01"), ymd("2011-07-31"), by = "days")
-load<-NN_for1_load$mean
-July_NN1<-data.frame(date=date, load=load)
-July_NN1
-```
-
-## [ADD]
-
-```{r}
-
-```
-
-## [ADD]
-
-```{r}
-
-```
-
-## [ADD]
-
-```{r}
 
 ```
 
