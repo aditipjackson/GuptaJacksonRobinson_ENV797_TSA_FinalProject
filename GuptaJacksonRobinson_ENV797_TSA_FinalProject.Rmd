@@ -99,6 +99,18 @@ ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
 
 # TIME SERIES ANALYSIS
 
+Table: Data Structure Summary - NITI Aayog
+
+Detail  | Description
+:------------- | -------------:
+Data Source  | India Climate and Energy Dashboard
+Retrieved from  | https://iced.niti.gov.in/energy/electricity/transmission/transmission-lines 
+Variables Used  | Line Length (cKM), Month of Completion
+Data Range | 2015 - 2023
+
+
+# TIME SERIES ANALYSIS
+
 ```{r time series}
 
 #Creating time series object
@@ -186,6 +198,20 @@ autoplot(transmission_ts, series = "original")+
 accuracy(sarima_forecast)
 
 ```
+
+```{r}
+
+#Forecasting using training data
+sarima_forecast_2030 <- forecast(transmission_training_ARIMA021101, h=90)
+
+# Extracting the forecasted value for 2030
+forecast_2030 <- sarima_forecast_2030$mean["2030-01-01"]
+
+# Printing the forecasted value for 2030
+print(forecast_2030)
+
+```
+
 
 ```{r TBATS}
 
