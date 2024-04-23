@@ -201,17 +201,10 @@ accuracy(sarima_forecast)
 
 ```{r}
 
-#Forecasting using training data
+#Forecasting through 2030
 sarima_forecast_2030 <- forecast(transmission_training_ARIMA021101, h=90)
 
-# Extracting the forecasted value for 2030
-forecast_2030 <- sarima_forecast_2030$mean["2030-01-01"]
-
-# Printing the forecasted value for 2030
-print(forecast_2030)
-
 ```
-
 
 ```{r TBATS}
 
