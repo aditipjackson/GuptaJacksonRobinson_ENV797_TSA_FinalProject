@@ -34,6 +34,7 @@ library(smooth)
 library(readr)
 library(zoo)
 library(cowplot)
+library(kableExtra)
 
 ```
 
@@ -195,7 +196,8 @@ autoplot(transmission_ts, series = "original")+
   ylab("Total Line Length (ckm)")
 
 #Checking accuracy of forecast
-accuracy(sarima_forecast)
+accuracy_SARIMA <- accuracy(sarima_forecast)
+accuracy_SARIMA
 
 ```
 
@@ -222,7 +224,8 @@ autoplot(transmission_ts, series = "original")+
   ylab("Total Line Length (km)")
 
 #Checking accuracy of forecast
-accuracy(tbats_forecast)
+accuracy_TBATS <- accuracy(tbats_forecast)
+accuracy_TBATS
 
 ```
 
@@ -242,7 +245,31 @@ autoplot(transmission_ts, series = "original")+
   ylab("Total Line Length (km)")
 
 #Checking accuracy of forecast
-accuracy(NN_forecast)
+accuracy_NN <- accuracy(NN_forecast)
+accuracy_NN
+
+```
+
+```{r}
+
+#Accuracy table
+
+#create data frame
+df_accuracy <- as.data.frame(rbind(accuracy_SARIMA, accuracy_TBATS, accuracy_NN))
+row.names(df_accuracy) <- c("SARIMA", "TBATS","NN")
+
+#choose model with lowest RMSE
+best_model_index_RMSE <- which.min(df_accuracy[,"RMSE"])
+best_model_index_MAPE <- which.min(df_accuracy[,"MAPE"])
+cat("The best model by RMSE is:", row.names(df_accuracy[best_model_index_RMSE,]))
+cat("The best model by MAPE is:", row.names(df_accuracy[best_model_index_MAPE,]))
+
+kbl(df_accuracy, 
+      caption = "Forecast Accuracy Table",
+      digits = array(5,ncol(df_accuracy))) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  #highlight model with lowest RMSE
+  kable_styling(latex_options="striped", stripe_index = which.min(df_accuracy[,"RMSE"]))
 
 ```
 
