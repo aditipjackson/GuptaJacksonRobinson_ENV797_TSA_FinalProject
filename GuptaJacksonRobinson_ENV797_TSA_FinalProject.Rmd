@@ -88,7 +88,7 @@ library(kableExtra)
 
 ```
 
-## Data Wrangling
+## Data Wrangling & initial plot
 
 ```{r wrangle, warning=FALSE}
 
