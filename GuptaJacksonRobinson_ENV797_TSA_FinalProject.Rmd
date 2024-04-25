@@ -184,7 +184,7 @@ print(plot(transmission_ts_decomp))
 ## Statistical Tests
 To determine whether or not the series was stationary (i.e. if its statistical properties like mean and variance do not change over time), we employed the Seasonal Mann-Kendall (SMK) and Augmented Dickey-Fuller (ADF) tests. The SMK test produced a positive test statistic (Tau = 1) and a significant p-value (2-sided p-value =< 2.22e-16) at the 95% confidence level. This indicates non-stationarity and a positive deterministic trend. The ADF test produced a negative test statistic (Dickey-Fuller = -3.2942) and an insignificant p-value (p = 0.07586) at a 95% confidence level. Thus we do not have enough evidence to reject the null hypothesis that the series has a unit root (i.e. non-stationarity). Instead, we would lean towards accepting the alternative hypothesis that the time series in question is stationary (i.e. does not possess a unit root).
 
-```{r decompose}
+```{r statistical tests}
 #Mann-Kendall and ADF to determine d term of ARIMA
 SMKtest <- SeasonalMannKendall(transmission_ts)
 print(summary(SMKtest))
