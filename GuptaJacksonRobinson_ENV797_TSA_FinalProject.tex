@@ -64,20 +64,6 @@
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \setcounter{secnumdepth}{-\maxdimen} % remove section numbering
-\usepackage{booktabs}
-\usepackage{longtable}
-\usepackage{array}
-\usepackage{multirow}
-\usepackage{wrapfig}
-\usepackage{float}
-\usepackage{colortbl}
-\usepackage{pdflscape}
-\usepackage{tabu}
-\usepackage{threeparttable}
-\usepackage{threeparttablex}
-\usepackage[normalem]{ulem}
-\usepackage{makecell}
-\usepackage{xcolor}
 \ifLuaTeX
   \usepackage{selnolig}  % disable illegal ligatures
 \fi
@@ -169,35 +155,34 @@ length (ckm) in each month, and month/year of completion. In order to
 create a time series dataset of total line length in each month, we
 wrangled it using the following process:
 
-\emph{Stage 1: Wrangling and methods} \n (1) Importing the dataset,
-subsetting it to only retain these two columns of interest, and renaming
-them to simpler names. Packages used were tidyverse, dplyr, lubridate,
-readxl, ggplot2, forecast, Kendall, tseries, smooth, readr, zoo,
-cowplot, kableExtra \n (2) Checking if there were any NAs (there
-weren't). \n (3) Splitting the ``month/ year of completion column'' that
-was a string into the month and year separately, converting the year
-from two digits to four digits (ex: ``15'' to ``2015''), pasting that
-back with the month column separated by a ``-'' and then using lubridate
-to convert it into a date object. \n (4) Using the group\_by(Date)
-function to add up all the capacity additions in the same month - that
-in the original dataset were broken up across multiple rows based on the
-regions of India that they occurred in (we only consider total
-nation-wide capacity and do not look at this data's breakup across
-states/ regions). \n (5) Using the cumsum() function to sum the line
-length of the previous month's total capacity (calculated) to the
-current month's capacity addition \n (original data). This gave us a
-dataset with two columns: Date and total transmission line length (ckm)
-until that month. \n (6) Plotting these two columns along with an lm
-line to check the trend. \n This concluded the first stage of wrangling
-the data to acquire our final dataset to be used for the analysis.
+Stage 1: Wrangling and methods \n (1) Importing the dataset, subsetting
+it to only retain these two columns of interest, and renaming them to
+simpler names. Packages used were tidyverse, dplyr, lubridate, readxl,
+ggplot2, forecast, Kendall, tseries, smooth, readr, zoo, cowplot,
+kableExtra \n (2) Checking if there were any NAs (there weren't). \n (3)
+Splitting the ``month/ year of completion column'' that was a string
+into the month and year separately, converting the year from two digits
+to four digits (ex: ``15'' to ``2015''), pasting that back with the
+month column separated by a ``-'' and then using lubridate to convert it
+into a date object. \n (4) Using the group\_by(Date) function to add up
+all the capacity additions in the same month - that in the original
+dataset were broken up across multiple rows based on the regions of
+India that they occurred in (we only consider total nation-wide capacity
+and do not look at this data's breakup across states/ regions). \n (5)
+Using the cumsum() function to sum the line length of the previous
+month's total capacity (calculated) to the current month's capacity
+addition \n (original data). This gave us a dataset with two columns:
+Date and total transmission line length (ckm) until that month. \n (6)
+Plotting these two columns along with an lm line to check the trend. \n
+This concluded the first stage of wrangling the data to acquire our
+final dataset to be used for the analysis.
 
-\emph{Stage 2: Initial Exploration} \n (1) Converting the data into a
-time series object.\n (2) Plotting the ACF and PACF.\n (3) Decomposing
-the time series object (multiplicative)\n (4) Running an SMK and ADF
-test.\n
+Stage 2: Initial Exploration \n (1) Converting the data into a time
+series object.\n (2) Plotting the ACF and PACF.\n (3) Decomposing the
+time series object (multiplicative)\n (4) Running an SMK and ADF test.\n
 
-\emph{Stage 3: Fitting the model and forecasting to training data} \n
-(1) Breaking up the dataset into training and testing: \n (i) Training:
+Stage 3: Fitting the model and forecasting to training data \n (1)
+Breaking up the dataset into training and testing: \n (i) Training:
 April 2015 to March 2023 \n (ii) Testing: April 2023 - January 2024 \n
 (these follow India's financial year cycle of April-March) \n (2)
 Fitting the models: \n (i) For ARIMA, identifying the best ARIMA model
@@ -439,13 +424,11 @@ the values to our original data. Then, we created a 7-year forecast to
 obtain a value for transmission build-out by 2030. Upon inspection, the
 forecast compares favorably with the test values from our original data.
 
-\includegraphics{GuptaJacksonRobinson_ENV797_TSA_FinalProject_files/figure-latex/unnamed-chunk-2-1.pdf}
+\includegraphics{GuptaJacksonRobinson_ENV797_TSA_FinalProject_files/figure-latex/neural network-1.pdf}
 
 \begin{verbatim}
-##                       ME     RMSE      MAE        MPE     MAPE      MASE
-## Training set -0.07695986 2516.504 1982.209 -0.1922873 2.211692 0.1026374
-##                   ACF1
-## Training set 0.8877197
+##                    ME     RMSE      MAE        MPE     MAPE      MASE      ACF1
+## Training set 4.434108 2516.243 1984.251 -0.1918467 2.216477 0.1027432 0.8875918
 \end{verbatim}
 
 \hypertarget{checking-accuracy}{%
@@ -466,23 +449,6 @@ comparison across a variety of accuracy measures.
 \begin{verbatim}
 ## The best model by MAPE is: SARIMA
 \end{verbatim}
-
-\begin{table}
-
-\caption{\label{tab:accuracy}Forecast Accuracy Table}
-\centering
-\begin{tabular}[t]{l|r|r|r|r|r|r|r}
-\hline
-  & ME & RMSE & MAE & MPE & MAPE & MASE & ACF1\\
-\hline
-SARIMA & -88.36536 & 1016.8839 & 760.9757 & -0.09539 & 1.44573 & 0.03940 & -0.01866\\
-\hline
-\cellcolor{gray!6}{TBATS} & \cellcolor{gray!6}{13.75430} & \cellcolor{gray!6}{887.3142} & \cellcolor{gray!6}{685.3520} & \cellcolor{gray!6}{-0.63538} & \cellcolor{gray!6}{2.30393} & \cellcolor{gray!6}{0.03549} & \cellcolor{gray!6}{-0.00187}\\
-\hline
-NN & -0.07696 & 2516.5043 & 1982.2086 & -0.19229 & 2.21169 & 0.10264 & 0.88772\\
-\hline
-\end{tabular}
-\end{table}
 
 \hypertarget{summary-and-conclusions}{%
 \section{Summary and Conclusions}\label{summary-and-conclusions}}

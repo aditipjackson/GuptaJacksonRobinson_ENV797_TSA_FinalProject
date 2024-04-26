@@ -2,7 +2,10 @@
 title: "Exploring Transmission Expansion in an RE future in India"
 author: "Shubhangi Gupta, Aditi Jackson, David Robinson"
 date: "2024-03-29"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -28,7 +31,7 @@ For this study, we used data on the line length (in ckm) of transmission lines i
 
 The original dataset included two columns of interest - additional line length (ckm) in each month, and month/year of completion. In order to create a time series dataset of total line length in each month, we wrangled it using the following process:
 
-*Stage 1: Wrangling and methods* \n
+Stage 1: Wrangling and methods \n
 (1) Importing the dataset, subsetting it to only retain these two columns of interest, and renaming them to simpler names. Packages used were  tidyverse, dplyr, lubridate, readxl, ggplot2, forecast, Kendall, tseries, smooth, readr, zoo, cowplot, kableExtra \n
 (2) Checking if there were any NAs (there weren’t). \n
 (3) Splitting the “month/ year of completion column” that was a string into the month and year separately, converting the year from two digits to four digits (ex: “15” to “2015”), pasting that back with the month column separated by a “-” and then using lubridate to convert it into a date object. \n
@@ -37,13 +40,13 @@ The original dataset included two columns of interest - additional line length (
 (6) Plotting these two columns along with an lm line to check the trend. \n
 This concluded the first stage of wrangling the data to acquire our final dataset to be used for the analysis.
 
-*Stage 2: Initial Exploration* \n
+Stage 2: Initial Exploration \n
 (1) Converting the data into a time series object.\n
 (2) Plotting the ACF and PACF.\n
 (3) Decomposing the time series object (multiplicative)\n
 (4) Running an SMK and ADF test.\n
 
-*Stage 3: Fitting the model and forecasting to training data* \n
+Stage 3: Fitting the model and forecasting to training data \n
 (1) Breaking up the dataset into training and testing: \n
     (i) Training: April 2015 to March 2023 \n
     (ii) Testing: April 2023 - January 2024 \n
@@ -69,7 +72,6 @@ Minimum Value  | 737 ckm (April 2015)
 Maximum Value  | 167889 ckm (January 2024)
 
 ```{r packages, include=FALSE}
-
 # loading packages
 library(tidyverse)
 library(dplyr)
@@ -84,6 +86,7 @@ library(smooth)
 library(readr)
 library(zoo)
 library(cowplot)
+library(knitr)
 library(kableExtra)
 
 ```
@@ -148,7 +151,6 @@ ggplot(transmission_CLEAN,aes(x=Date,y=TotalLineLength))+
 
 ```
 
-
 # Analysis
 
 ## Plots
@@ -175,7 +177,6 @@ plot_grid(ts_plot, autoplot(ACF), autoplot(PACF), nrow = 1)
 The series was then decomposed into observed, trend, seasonality, and residuals. The observed and trend components both increase similarly over time. However, the seasonal component is not representative of the dataset. Upon further inspection, we observed that the seasonality was too uniform in magnitude and may not be part of the dataset. While there may be some seasonality due to construction start and end dates for transmission projects  (e.g. before and after Monsoon Season), it is more likely that the decompose function in R is forcing a seasonal component that does not exist within the data. As such, we did not de-season the data and instead chose to fit models that could handle seasonality (see below). The residuals looked fairly random, so we did not see the need for further manipulation before fitting models.
 
 ```{r decompose}
-
 #Decompose
 transmission_ts_decomp <- decompose(transmission_ts, "additive")
 print(plot(transmission_ts_decomp))
@@ -243,11 +244,9 @@ accuracy_SARIMA
 
 ```
 
-```{r}
-
+```{r sarima2030}
 #Forecasting through 2030
 sarima_forecast_2030 <- forecast(transmission_training_ARIMA021101, h=84)
-
 ```
 
 ### TBATS - Model and Forecast
@@ -279,8 +278,7 @@ accuracy_TBATS
 The last model we fit was a neural network since they are able to capture complex patterns in time series data. We used the function nnetar() from package ‘forecast’ with p = 1 and P = 1 (taken from the parameters of our SARIMA model). 
 Similar to our workflow with SARIMA and TBATS, we created a forecast with the Neural Network model and compared the values to our original data. Then, we created a 7-year forecast to obtain a value for transmission build-out by 2030. Upon inspection, the forecast compares favorably with the test values from our original data.
 
-```{r}
-
+```{r neural network}
 #Fitting neural network model using training data
 NN_model <- nnetar(transmission_ts_training, p=0, P=1)
 
@@ -321,8 +319,8 @@ kbl(df_accuracy,
       caption = "Forecast Accuracy Table",
       digits = array(5,ncol(df_accuracy))) %>%
   kable_styling(full_width = FALSE, position = "center") %>%
-  #highlight model with lowest RMSE
-  kable_styling(latex_options="striped", stripe_index = which.min(df_accuracy[,"RMSE"]))
+  highlight model with lowest RMSE
+  #kable_styling(latex_options="striped", stripe_index = which.min(df_accuracy[,"RMSE"]))
 
 ```
 
@@ -334,7 +332,7 @@ In seeking a reference point from the literature by which to measure the success
 over the 2022-23 capacity of 487,367 Ckm. [Source](https://web.cvent.com/event/681be785-fd13-4645-8c92-3305ca1454c5/summary).
 Adding these estimates of needed transmission line build-out and current transmission line length, the literature suggests that cumulative transmission line capacity would need to reach 529,257 Ckm by 2030 to achieve its 2030 RE target.
 
-```{r, echo=FALSE}
+```{r forecast mean, echo=FALSE}
 sarima_forecast$mean
 tbats_forecast$mean
 ```
